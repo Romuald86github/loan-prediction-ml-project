@@ -1,0 +1,26 @@
+# Data directory
+data/
+*.csv
+
+# Python specifics
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Model files
+*.joblib
+
+# Virtual environment
+venv/
+env/
+.env/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Misc
+.DS_Store
