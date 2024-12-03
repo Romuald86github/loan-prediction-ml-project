@@ -150,40 +150,46 @@ class PreprocessingPipeline:
         return X, y.values.ravel()
     
     def transform(self, df):
-        """
-        Transform new data using the saved preprocessing steps
-        
-        Args:
-            df (pandas.DataFrame): Input dataframe to transform
-        
-        Returns:
-            tuple: Transformed features and encoded target
-        """
-        # Create a copy of the input dataframe
-        X = df.copy()
-        
-        # Separate target if present
-        if 'Loan_Status' in X.columns:
-            y = X['Loan_Status']
-            X = X.drop('Loan_Status', axis=1)
-            # Encode target if needed
-            y = self.target_encoder.transform(y.values.reshape(-1, 1)).ravel()
-        else:
-            y = None
-        
+       """
+       Transform new data using the saved preprocessing steps
+    
+       Args:
+           df (pandas.DataFrame): Input dataframe to transform
+    
+       Returns:
+           tuple: Transformed features and encoded target
+       """
+       # Create a copy of the input dataframe
+       X = df.copy()
+    
+       # Separate target if present
+       if 'Loan_Status' in X.columns:
+           y = X['Loan_Status']
+           X = X.drop('Loan_Status', axis=1)
+           # Encode target if needed
+           y = self.target_encoder.transform(y.values.reshape(-1, 1)).ravel()
+       else:
+           y = None
+    
         # Encode categorical variables using saved encoders
-        for col, encoder in self.fitted_categorical_encoders.items():
-            X[col] = encoder.transform(X[col].values.reshape(-1, 1))
-        
+       for col, encoder in self.fitted_categorical_encoders.items():
+           # Ensure the column is reshaped correctly for single-row input
+           X[col] = encoder.transform(X[col].values.reshape(-1, 1)).ravel()
+    
         # Apply Yeo-Johnson transformation to numeric columns
-        numeric_cols = X.select_dtypes(include=['int64', 'float64']).columns
-        for col in numeric_cols:
-            X[col] = yeojohnson(X[col] + abs(X[col].min()) + 1)[0]
-        
-        # Scale features
-        X = pd.DataFrame(self.scaler.transform(X), columns=X.columns)
-        
-        return (X, y) if y is not None else X
+       numeric_cols = X.select_dtypes(include=['int64', 'float64']).columns
+       for col in numeric_cols:
+           # Add a small constant to avoid issues with zero or negative values
+           # Use ravel() to ensure it works with single-row input
+           X[col] = yeojohnson(X[col] + abs(X[col].min()) + 1)[0].ravel()
+    
+       # Ensure X is a 2D numpy array for scaling
+       X = X.values.reshape(1, -1) if X.ndim == 1 else X.values
+    
+       # Scale features
+       X = pd.DataFrame(self.scaler.transform(X), columns=self.scaler.get_feature_names_out() if hasattr(self.scaler, 'get_feature_names_out') else range(X.shape[1]))
+    
+       return (X, y) if y is not None else X
 
 # Example of how to use the preprocessing pipeline
 if __name__ == "__main__":

@@ -42,6 +42,13 @@ def safe_transform(pipeline, input_data):
         # Transform the data
         preprocessed_data = pipeline.transform(input_data)
 
+        # Ensure preprocessed_data is a 2D numpy array
+        if isinstance(preprocessed_data, tuple):
+            preprocessed_data = preprocessed_data[0]
+        
+        if preprocessed_data.ndim == 1:
+            preprocessed_data = preprocessed_data.reshape(1, -1)
+
         # Additional safety check for transformed data
         if not np.isfinite(preprocessed_data).all():
             st.warning("Warning: Preprocessing resulted in non-finite values. Using mean imputation.")
