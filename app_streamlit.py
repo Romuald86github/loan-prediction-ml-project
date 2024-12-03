@@ -61,25 +61,32 @@ def main():
         input_data = {}
         for i, feature in enumerate(feature_names):
             with col1 if i % 2 == 0 else col2:
-                if feature in ['Gender', 'Married', 'Education', 'Property_Area']:
-                    options = {
-                        'Gender': ["Male", "Female"],
-                        'Married': ["Yes", "No"],
-                        'Education': ["Graduate", "Not Graduate"],
-                        'Property_Area': ["Urban", "Rural", "Semiurban"]
-                    }
-                    input_data[feature] = st.selectbox(feature, options[feature])
+                if feature == 'Gender':
+                    input_data[feature] = st.selectbox(feature, ["Male", "Female"])
+                elif feature == 'Married':
+                    input_data[feature] = st.selectbox(feature, ["Yes", "No"])
                 elif feature == 'Dependents':
                     input_data[feature] = st.selectbox(feature, ["0", "1", "2", "3+"])
+                elif feature == 'Education':
+                    input_data[feature] = st.selectbox(feature, ["Graduate", "Not Graduate"])
+                elif feature == 'Self_Employed':
+                    input_data[feature] = st.selectbox(feature, ["Yes", "No"])
                 elif feature == 'Credit_History':
                     input_data[feature] = st.selectbox(feature, ["1", "0"])
+                elif feature == 'Property_Area':
+                    input_data[feature] = st.selectbox(feature, ["Urban", "Rural", "Semiurban"])
                 else:  # Assume numeric for any other feature
-                    input_data[feature] = st.number_input(feature, value=0)
+                    input_data[feature] = st.number_input(feature, value=0.0, format="%.2f")
         
         submitted = st.form_submit_button("Predict Loan Eligibility")
     
     if submitted:
         input_df = pd.DataFrame([input_data])
+        
+        # Convert numeric columns to float
+        for col in input_df.columns:
+            if input_df[col].dtype == 'object' and col not in ['Gender', 'Married', 'Dependents', 'Education', 'Self_Employed', 'Property_Area']:
+                input_df[col] = input_df[col].astype(float)
         
         prediction = predict_loan_eligibility(model, preprocessing, feature_names, input_df)
         
