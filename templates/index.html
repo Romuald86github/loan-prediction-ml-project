@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Loan Prediction</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Loan Prediction</h1>
+    <form action="{{ url_for('predict') }}" method="post">
+        <label for="Gender">Gender:</label>
+        <select name="Gender" id="Gender" required>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select><br>
+
+        <label for="Married">Married:</label>
+        <select name="Married" id="Married" required>
+            <option value="Yes">Yes</option>
+            <option value="No">No</option>
+        </select><br>
+
+        <label for="Dependents">Dependents:</label>
+        <select name="Dependents" id="Dependents" required>
+            <option value="0">0</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3+">3+</option>
+        </select><br>
+
+        <label for="Education">Education:</label>
+        <select name="Education" id="Education" required>
+            <option value="Graduate">Graduate</option>
+            <option value="Not Graduate">Not Graduate</option>
+        </select><br>
+
+        <label for="LoanAmount">Loan Amount:</label>
+        <input type="number" name="LoanAmount" id="LoanAmount" required><br>
+
+        <label for="Credit_History">Credit History:</label>
+        <select name="Credit_History" id="Credit_History" required>
+            <option value="1.0">1.0</option>
+            <option value="0.0">0.0</option>
+        </select><br>
+
+        <label for="Property_Area">Property Area:</label>
+        <select name="Property_Area" id="Property_Area" required>
+            <option value="Urban">Urban</option>
+            <option value="Semiurban">Semiurban</option>
+            <option value="Rural">Rural</option>
+        </select><br>
+
+        <input type="submit" value="Predict">
+    </form>
+
+    {% if prediction_text %}
+    <div class="prediction">
+        <h2>{{ prediction_text }}</h2>
+    </div>
+    {% endif %}
+</body>
+</html>
