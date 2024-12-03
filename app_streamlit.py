@@ -4,7 +4,7 @@ import pandas as pd
 import numpy as np
 import os
 
-from preprocessing_pipeline import PreprocessingPipeline
+from src.preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     pipeline_path = 'models/preprocessing_pipeline.pkl'
