@@ -2,7 +2,7 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
-from src.preprocessing_pipeline import PreprocessingPipeline
+from preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     """Load the best trained model and preprocessing pipeline."""
@@ -59,17 +59,15 @@ def main():
         col1, col2 = st.columns(2)
         
         with col1:
-            # Categorical inputs
             gender = st.selectbox("Gender", ["Male", "Female"])
-            married = st.selectbox("Marital Status", ["Yes", "No"])
+            married = st.selectbox("Married", ["Yes", "No"])
+            dependents = st.selectbox("Dependents", ["0", "1", "2", "3+"])
             education = st.selectbox("Education", ["Graduate", "Not Graduate"])
-            property_area = st.selectbox("Property Area", ["Urban", "Rural", "Semiurban"])
-            credit_history = st.selectbox("Credit History", [0, 1])
         
         with col2:
-            # Numerical inputs
-            dependents = st.number_input("Number of Dependents", min_value=0, max_value=10, value=0)
-            loan_amount = st.number_input("Loan Amount", min_value=0, value=200)
+            credit_history = st.selectbox("Credit History", [0, 1])
+            property_area = st.selectbox("Property Area", ["Urban", "Rural", "Semiurban"])
+            loan_amount = st.number_input("Loan Amount (in thousands)", min_value=0, value=200)
         
         # Submit button
         submitted = st.form_submit_button("Predict Loan Eligibility")
@@ -80,11 +78,11 @@ def main():
         input_data = pd.DataFrame({
             'Gender': [gender],
             'Married': [married],
-            'Dependents': [str(dependents)],
+            'Dependents': [dependents],
             'Education': [education],
-            'LoanAmount': [loan_amount],
             'Credit_History': [credit_history],
-            'Property_Area': [property_area]
+            'Property_Area': [property_area],
+            'LoanAmount': [loan_amount]
         })
         
         # Make prediction
