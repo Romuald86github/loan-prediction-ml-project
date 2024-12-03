@@ -12,11 +12,15 @@ def load_model_and_pipeline():
         
         # Load the preprocessing pipeline
         preprocessing = PreprocessingPipeline()
-        preprocessing.load_pipeline()
+        pipeline_components = preprocessing.load_pipeline()
+        preprocessing.fitted_categorical_encoders = pipeline_components['categorical_encoders']
+        preprocessing.target_encoder = pipeline_components['target_encoder']
+        preprocessing.scaler = pipeline_components['scaler']
+        preprocessing.smote = pipeline_components['smote']
         
         return model, preprocessing
     except Exception as e:
-        st.error(f"Error loading model: {e}")
+        st.error(f"Error loading model or pipeline: {e}")
         return None, None
 
 def predict_loan_eligibility(model, preprocessing, input_data):
@@ -29,8 +33,7 @@ def predict_loan_eligibility(model, preprocessing, input_data):
         prediction = model.predict(X_processed)
         
         # Convert prediction back to original labels
-        target_encoder = preprocessing.target_encoder
-        prediction_label = target_encoder.inverse_transform(prediction.reshape(-1, 1))[0][0]
+        prediction_label = preprocessing.target_encoder.inverse_transform(prediction.reshape(-1, 1))[0][0]
         
         return prediction_label
     except Exception as e:
@@ -73,7 +76,7 @@ def main():
     
     # Prediction logic
     if submitted:
-        # Prepare input data as DataFrame (removed dropped features)
+        # Prepare input data as DataFrame
         input_data = pd.DataFrame({
             'Gender': [gender],
             'Married': [married],
