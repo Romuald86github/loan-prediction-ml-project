@@ -2,7 +2,7 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
-from preprocessing_pipeline import PreprocessingPipeline
+from src.preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     """Load the best trained model and preprocessing pipeline."""
