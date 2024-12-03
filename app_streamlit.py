@@ -1,167 +1,83 @@
 import streamlit as st
 import joblib
 import pandas as pd
-import numpy as np
-from src.preprocessing_pipeline import PreprocessingPipeline
+import os
+
+from preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
-    """Load the best trained model and preprocessing pipeline."""
-    try:
-        # Dynamically find the latest model
-        import glob
-        import os
-        model_files = glob.glob('models/*_model.pkl')
-        if not model_files:
-            st.error("No model found. Please train a model first.")
-            return None, None, None
-        
-        # Load the most recently created model
-        model_path = max(model_files, key=os.path.getctime)
-        model = joblib.load(model_path)
-        
-        preprocessing = PreprocessingPipeline()
-        pipeline_components = preprocessing.load_pipeline()
-        preprocessing.fitted_categorical_encoders = pipeline_components['categorical_encoders']
-        preprocessing.target_encoder = pipeline_components['target_encoder']
-        preprocessing.scaler = pipeline_components['scaler']
-        preprocessing.smote = pipeline_components['smote']
-        
-        # Get the feature names from the data cleaning process
-        df = preprocessing.load_data()
-        feature_names = df.drop('Loan_Status', axis=1).columns.tolist()
-        
-        return model, preprocessing, feature_names
-    except Exception as e:
-        st.error(f"Error loading model or pipeline: {e}")
-        return None, None, None
-
-def prepare_input_data(input_data, feature_names, preprocessing):
     """
-    Prepare input data for prediction by ensuring correct encoding and type
-    
-    Args:
-        input_data (pd.DataFrame): Raw input data
-        feature_names (list): List of expected feature names
-        preprocessing (PreprocessingPipeline): Preprocessing pipeline
-    
-    Returns:
-        pd.DataFrame: Preprocessed input data
+    Load the saved preprocessing pipeline and best model
     """
-    # Categorical columns that need specific encoding
-    categorical_columns = {
-        'Gender': ['Male', 'Female'],
-        'Married': ['Yes', 'No'],
-        'Dependents': ['0', '1', '2', '3+'],
-        'Education': ['Graduate', 'Not Graduate'],
-        'Credit_History': ['1', '0'],
-        'Property_Area': ['Urban', 'Rural', 'Semiurban']
-    }
+    # Load preprocessing pipeline
+    preprocessing_pipeline = PreprocessingPipeline()
     
-    # Ensure correct encoding for each categorical column
-    for col, categories in categorical_columns.items():
-        if col in input_data.columns:
-            # Use the fitted encoder for each categorical column
-            if col in preprocessing.fitted_categorical_encoders:
-                encoder = preprocessing.fitted_categorical_encoders[col]
-                
-                # Transform the input value
-                try:
-                    encoded_value = encoder.transform(input_data[[col]])[0][0]
-                    input_data[col] = encoded_value
-                except Exception as e:
-                    st.error(f"Error encoding {col}: {e}")
-                    st.error(f"Value: {input_data[col].values}")
-                    return None
+    # Load the saved model
+    model_path = 'models/Random_Forest_model.pkl'
+    if not os.path.exists(model_path):
+        st.error(f"Model file not found at {model_path}. Please train the model first.")
+        return None, None
     
-    # Ensure correct column order
-    input_data = input_data.reindex(columns=feature_names)
-    
-    return input_data
-
-def predict_loan_eligibility(model, preprocessing, feature_names, input_data):
-    """Predict loan eligibility using the trained model and preprocessing pipeline."""
-    try:
-        # Prepare input data for prediction
-        prepared_data = prepare_input_data(input_data, feature_names, preprocessing)
-        
-        if prepared_data is None:
-            st.error("Failed to prepare input data")
-            return None
-        
-        # Preprocess the input data
-        X_processed = preprocessing.transform(prepared_data)
-        
-        # Make prediction
-        prediction = model.predict(X_processed)
-        
-        # Convert prediction back to original labels
-        prediction_label = preprocessing.target_encoder.inverse_transform(prediction.reshape(-1, 1))[0][0]
-        
-        return prediction_label
-    except Exception as e:
-        st.error(f"Prediction error: {e}")
-        st.error(f"Input data: {input_data}")
-        return None
+    model = joblib.load(model_path)
+    return preprocessing_pipeline, model
 
 def main():
-    st.set_page_config(page_title="Loan Eligibility Predictor", page_icon=":bank:")
-    st.title("Loan Eligibility Prediction")
+    # Set page title and icon
+    st.set_page_config(page_title="Loan Approval Prediction", page_icon=":bank:")
     
-    model, preprocessing, feature_names = load_model_and_pipeline()
+    # Title of the application
+    st.title("Loan Approval Prediction")
+    st.write("Predict whether a loan application will be approved or not.")
     
-    if model is None or preprocessing is None or feature_names is None:
-        st.stop()
+    # Load preprocessing pipeline and model
+    preprocessing_pipeline, model = load_model_and_pipeline()
     
+    if preprocessing_pipeline is None or model is None:
+        return
+    
+    # Input form for loan application details
     with st.form("loan_application"):
-        col1, col2 = st.columns(2)
+        # Categorical inputs
+        gender = st.selectbox("Gender", ["Male", "Female"])
+        married = st.selectbox("Marital Status", ["Yes", "No"])
+        education = st.selectbox("Education", ["Graduate", "Not Graduate"])
+        dependents = st.selectbox("Number of Dependents", ["0", "1", "2", "3+"])
+        credit_history = st.selectbox("Credit History", ["1.0", "0.0"])
+        property_area = st.selectbox("Property Area", ["Urban", "Rural", "Semiurban"])
         
-        input_data = {}
-        for i, feature in enumerate(feature_names):
-            with col1 if i % 2 == 0 else col2:
-                if feature == 'Gender':
-                    input_data[feature] = st.selectbox(feature, ["Male", "Female"])
-                elif feature == 'Married':
-                    input_data[feature] = st.selectbox(feature, ["Yes", "No"])
-                elif feature == 'Dependents':
-                    input_data[feature] = st.selectbox(feature, ["0", "1", "2", "3+"])
-                elif feature == 'Education':
-                    input_data[feature] = st.selectbox(feature, ["Graduate", "Not Graduate"])
-                elif feature == 'Credit_History':
-                    input_data[feature] = st.selectbox(feature, ["1", "0"])
-                elif feature == 'Property_Area':
-                    input_data[feature] = st.selectbox(feature, ["Urban", "Rural", "Semiurban"])
-                elif feature == 'LoanAmount':
-                    input_data[feature] = st.number_input(
-                        feature, 
-                        min_value=0, 
-                        max_value=500, 
-                        value=150, 
-                        help="Loan amount in thousands (0-500)"
-                    )
-                else:
-                    st.warning(f"Unexpected feature: {feature}")
+        # Numeric input
+        loan_amount = st.number_input("Loan Amount (in thousands)", min_value=1, max_value=500, value=150)
         
-        submitted = st.form_submit_button("Predict Loan Eligibility")
-    
-    if submitted:
-        input_df = pd.DataFrame([input_data])
+        # Submit button
+        submitted = st.form_submit_button("Predict Loan Approval")
         
-        # Predict loan eligibility
-        prediction = predict_loan_eligibility(model, preprocessing, feature_names, input_df)
-        
-        if prediction:
-            st.subheader("Prediction Result")
-            if prediction == 'Y':
-                st.success("Congratulations! 🎉 Your loan application is likely to be approved.")
-            else:
-                st.warning("Unfortunately, your loan application may not be approved.")
+        if submitted:
+            # Prepare input data as DataFrame
+            input_data = pd.DataFrame({
+                'Gender': [gender],
+                'Married': [married],
+                'Dependents': [dependents],
+                'Education': [education],
+                'LoanAmount': [loan_amount],
+                'Credit_History': [float(credit_history)],
+                'Property_Area': [property_area]
+            })
             
-            if hasattr(model, 'predict_proba'):
-                X_processed = preprocessing.transform(
-                    prepare_input_data(input_df, feature_names, preprocessing)
-                )
-                prob = model.predict_proba(X_processed)[0]
-                st.info(f"Prediction Confidence: {prob.max():.2%}")
+            # Preprocess the input data
+            preprocessed_data, _ = preprocessing_pipeline.transform(input_data)
+            
+            # Make prediction
+            prediction = model.predict(preprocessed_data)
+            
+            # Display prediction
+            if prediction[0] == 1:
+                st.success("Congratulations! 🎉 Your loan is likely to be approved.")
+            else:
+                st.warning("Sorry, your loan application might not be approved.")
+            
+            # Optional: Show prediction probability
+            prediction_proba = model.predict_proba(preprocessed_data)
+            st.write(f"Probability of Approval: {prediction_proba[0][1]*100:.2f}%")
 
 if __name__ == "__main__":
     main()
