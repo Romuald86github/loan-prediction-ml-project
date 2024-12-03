@@ -18,9 +18,6 @@ class PreprocessingPipeline:
         # Placeholders to store fitted transformers
         self.fitted_categorical_encoders = {}
         self.target_encoder = OrdinalEncoder()
-        
-        # Add a flag to track if pipeline is fitted
-        self.is_fitted = False
     
     @classmethod
     def load_data(cls, path='data/clean.csv'):
@@ -84,9 +81,6 @@ class PreprocessingPipeline:
         # Apply SMOTE for handling class imbalance
         X, y = self.smote.fit_resample(X, y)
         
-        # Mark pipeline as fitted
-        self.is_fitted = True
-        
         # Save preprocessed data if requested
         if save:
             self.save_preprocessed_data(X, y)
@@ -112,18 +106,13 @@ class PreprocessingPipeline:
         """
         Save the preprocessing pipeline components using pickle
         """
-        # Ensure pipeline is fitted before saving
-        if not self.is_fitted:
-            raise ValueError("Pipeline must be fitted before saving.")
-        
         # Save the entire pipeline
         with open('models/preprocessing_pipeline.pkl', 'wb') as f:
             pickle.dump({
                 'categorical_encoders': self.fitted_categorical_encoders,
                 'target_encoder': self.target_encoder,
                 'scaler': self.scaler,
-                'smote': self.smote,
-                'is_fitted': self.is_fitted
+                'smote': self.smote
             }, f)
     
     @classmethod
@@ -145,7 +134,6 @@ class PreprocessingPipeline:
         pipeline.target_encoder = pipeline_components['target_encoder']
         pipeline.scaler = pipeline_components['scaler']
         pipeline.smote = pipeline_components['smote']
-        pipeline.is_fitted = pipeline_components['is_fitted']
         
         return pipeline
     
@@ -171,10 +159,6 @@ class PreprocessingPipeline:
         Returns:
             tuple: Transformed features and encoded target
         """
-        # Check if pipeline is fitted
-        if not self.is_fitted:
-            raise ValueError("Pipeline must be fitted before transforming data. Call preprocess() first.")
-        
         # Create a copy of the input dataframe
         X = df.copy()
         

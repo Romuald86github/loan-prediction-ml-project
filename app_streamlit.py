@@ -3,7 +3,7 @@ import joblib
 import pandas as pd
 import os
 
-from src.preprocessing_pipeline import PreprocessingPipeline
+from preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     """
