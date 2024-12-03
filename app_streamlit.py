@@ -3,21 +3,28 @@ import joblib
 import pandas as pd
 import os
 
-from src.preprocessing_pipeline import PreprocessingPipeline
+from preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     """
     Load the saved preprocessing pipeline and best model
     """
-    # Load preprocessing pipeline
-    preprocessing_pipeline = PreprocessingPipeline()
-    
-    # Load the saved model
+    # Check if preprocessing pipeline exists
+    pipeline_path = 'models/preprocessing_pipeline.pkl'
     model_path = 'models/Random_Forest_model.pkl'
+    
+    if not os.path.exists(pipeline_path):
+        st.error(f"Preprocessing pipeline not found at {pipeline_path}. Please train the model first.")
+        return None, None
+    
     if not os.path.exists(model_path):
         st.error(f"Model file not found at {model_path}. Please train the model first.")
         return None, None
     
+    # Load preprocessing pipeline
+    preprocessing_pipeline = PreprocessingPipeline.load_pipeline()
+    
+    # Load the saved model
     model = joblib.load(model_path)
     return preprocessing_pipeline, model
 
@@ -64,7 +71,7 @@ def main():
             })
             
             # Preprocess the input data
-            preprocessed_data, _ = preprocessing_pipeline.transform(input_data)
+            preprocessed_data = preprocessing_pipeline.transform(input_data)
             
             # Make prediction
             prediction = model.predict(preprocessed_data)
