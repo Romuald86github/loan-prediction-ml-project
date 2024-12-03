@@ -26,6 +26,10 @@ def load_model_and_pipeline():
 def predict_loan_eligibility(model, preprocessing, input_data):
     """Predict loan eligibility using the trained model and preprocessing pipeline."""
     try:
+        # Ensure the input data has all required columns in the correct order
+        required_columns = ['Gender', 'Married', 'Dependents', 'Education', 'Credit_History', 'Property_Area', 'LoanAmount']
+        input_data = input_data.reindex(columns=required_columns)
+        
         # Preprocess the input data
         X_processed = preprocessing.transform(input_data)
         
@@ -41,40 +45,31 @@ def predict_loan_eligibility(model, preprocessing, input_data):
         return None
 
 def main():
-    # Set page title and favicon
     st.set_page_config(page_title="Loan Eligibility Predictor", page_icon=":bank:")
-    
-    # Page title
     st.title("Loan Eligibility Prediction")
     
-    # Load model and preprocessing pipeline
     model, preprocessing = load_model_and_pipeline()
     
     if model is None or preprocessing is None:
         st.stop()
     
-    # Create input form
     with st.form("loan_application"):
-        # Create columns for better layout
         col1, col2 = st.columns(2)
         
         with col1:
             gender = st.selectbox("Gender", ["Male", "Female"])
-            married = st.selectbox("Married", ["Yes", "No"])
-            dependents = st.selectbox("Dependents", ["0", "1", "2", "3+"])
+            married = st.selectbox("Marital Status", ["Yes", "No"])
+            dependents = st.selectbox("Number of Dependents", ["0", "1", "2", "3+"])
             education = st.selectbox("Education", ["Graduate", "Not Graduate"])
         
         with col2:
-            credit_history = st.selectbox("Credit History", [0, 1])
+            credit_history = st.selectbox("Credit History", ["1", "0"])
             property_area = st.selectbox("Property Area", ["Urban", "Rural", "Semiurban"])
             loan_amount = st.number_input("Loan Amount (in thousands)", min_value=0, value=200)
         
-        # Submit button
         submitted = st.form_submit_button("Predict Loan Eligibility")
     
-    # Prediction logic
     if submitted:
-        # Prepare input data as DataFrame
         input_data = pd.DataFrame({
             'Gender': [gender],
             'Married': [married],
@@ -85,10 +80,8 @@ def main():
             'LoanAmount': [loan_amount]
         })
         
-        # Make prediction
         prediction = predict_loan_eligibility(model, preprocessing, input_data)
         
-        # Display results
         if prediction:
             st.subheader("Prediction Result")
             if prediction == 'Y':
@@ -96,7 +89,6 @@ def main():
             else:
                 st.warning("Unfortunately, your loan application may not be approved.")
             
-            # Optional: Add probability or confidence (if model supports)
             if hasattr(model, 'predict_proba'):
                 prob = model.predict_proba(preprocessing.transform(input_data))[0]
                 st.info(f"Prediction Confidence: {prob.max():.2%}")
