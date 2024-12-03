@@ -2,12 +2,22 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
-from src.preprocessing_pipeline import PreprocessingPipeline
+from preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     """Load the best trained model and preprocessing pipeline."""
     try:
-        model = joblib.load('models/Random_Forest_model.pkl')
+        # Dynamically find the latest model
+        import glob
+        import os
+        model_files = glob.glob('models/*_model.pkl')
+        if not model_files:
+            st.error("No model found. Please train a model first.")
+            return None, None, None
+        
+        # Load the most recently created model
+        model_path = max(model_files, key=os.path.getctime)
+        model = joblib.load(model_path)
         
         preprocessing = PreprocessingPipeline()
         pipeline_components = preprocessing.load_pipeline()
@@ -16,8 +26,9 @@ def load_model_and_pipeline():
         preprocessing.scaler = pipeline_components['scaler']
         preprocessing.smote = pipeline_components['smote']
         
-        # Get the feature names from the scaler
-        feature_names = preprocessing.scaler.feature_names_in_
+        # Get the feature names from the data cleaning process
+        df = preprocessing.load_data()
+        feature_names = df.drop('Loan_Status', axis=1).columns.tolist()
         
         return model, preprocessing, feature_names
     except Exception as e:
@@ -53,8 +64,6 @@ def main():
     if model is None or preprocessing is None or feature_names is None:
         st.stop()
     
-    st.write("Expected features:", feature_names)  # Debug information
-    
     with st.form("loan_application"):
         col1, col2 = st.columns(2)
         
@@ -69,24 +78,22 @@ def main():
                     input_data[feature] = st.selectbox(feature, ["0", "1", "2", "3+"])
                 elif feature == 'Education':
                     input_data[feature] = st.selectbox(feature, ["Graduate", "Not Graduate"])
-                elif feature == 'Self_Employed':
-                    input_data[feature] = st.selectbox(feature, ["Yes", "No"])
                 elif feature == 'Credit_History':
                     input_data[feature] = st.selectbox(feature, ["1", "0"])
                 elif feature == 'Property_Area':
                     input_data[feature] = st.selectbox(feature, ["Urban", "Rural", "Semiurban"])
-                else:  # Assume numeric for any other feature
-                    input_data[feature] = st.number_input(feature, value=0.0, format="%.2f")
+                elif feature == 'LoanAmount':
+                    input_data[feature] = st.number_input(feature, min_value=0, value=150, help="Loan amount in thousands")
+                else:
+                    st.warning(f"Unexpected feature: {feature}")
         
         submitted = st.form_submit_button("Predict Loan Eligibility")
     
     if submitted:
         input_df = pd.DataFrame([input_data])
         
-        # Convert numeric columns to float
-        for col in input_df.columns:
-            if input_df[col].dtype == 'object' and col not in ['Gender', 'Married', 'Dependents', 'Education', 'Self_Employed', 'Property_Area']:
-                input_df[col] = input_df[col].astype(float)
+        # Convert input to the expected format
+        input_df['Dependents'] = input_df['Dependents'].replace({'3+': '3'})
         
         prediction = predict_loan_eligibility(model, preprocessing, feature_names, input_df)
         
@@ -98,7 +105,8 @@ def main():
                 st.warning("Unfortunately, your loan application may not be approved.")
             
             if hasattr(model, 'predict_proba'):
-                prob = model.predict_proba(preprocessing.transform(input_df))[0]
+                X_processed = preprocessing.transform(input_df)
+                prob = model.predict_proba(X_processed)[0]
                 st.info(f"Prediction Confidence: {prob.max():.2%}")
 
 if __name__ == "__main__":
