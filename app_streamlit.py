@@ -8,7 +8,7 @@ def load_model_and_pipeline():
     """Load the best trained model and preprocessing pipeline."""
     try:
         # Load the best model (adjust filename as needed)
-        model = joblib.load('models/best_model.pkl')
+        model = joblib.load('models/Random_Forest_model.pkl')
         
         # Load the preprocessing pipeline
         preprocessing = PreprocessingPipeline()
