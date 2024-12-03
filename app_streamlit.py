@@ -2,7 +2,7 @@ import streamlit as st
 import joblib
 import pandas as pd
 import numpy as np
-from src.preprocessing_pipeline import PreprocessingPipeline
+from preprocessing_pipeline import PreprocessingPipeline
 
 def load_model_and_pipeline():
     """Load the best trained model and preprocessing pipeline."""
@@ -35,54 +35,61 @@ def load_model_and_pipeline():
         st.error(f"Error loading model or pipeline: {e}")
         return None, None, None
 
-def validate_input(input_data):
+def prepare_input_data(input_data, feature_names, preprocessing):
     """
-    Validate and clean input data to prevent numerical issues
+    Prepare input data for prediction by ensuring correct encoding and type
     
     Args:
-        input_data (pd.DataFrame): Input dataframe to validate
+        input_data (pd.DataFrame): Raw input data
+        feature_names (list): List of expected feature names
+        preprocessing (PreprocessingPipeline): Preprocessing pipeline
     
     Returns:
-        pd.DataFrame: Cleaned and validated dataframe
+        pd.DataFrame: Preprocessed input data
     """
-    # Mapping for categorical columns
-    categorical_mappings = {
-        'Gender': {'Male': 1, 'Female': 0},
-        'Married': {'Yes': 1, 'No': 0},
-        'Dependents': {'0': 0, '1': 1, '2': 2, '3+': 3},
-        'Education': {'Graduate': 1, 'Not Graduate': 0},
-        'Credit_History': {'1': 1, '0': 0},
-        'Property_Area': {'Urban': 2, 'Rural': 0, 'Semiurban': 1}
+    # Categorical columns that need specific encoding
+    categorical_columns = {
+        'Gender': ['Male', 'Female'],
+        'Married': ['Yes', 'No'],
+        'Dependents': ['0', '1', '2', '3+'],
+        'Education': ['Graduate', 'Not Graduate'],
+        'Credit_History': ['1', '0'],
+        'Property_Area': ['Urban', 'Rural', 'Semiurban']
     }
     
-    # Apply categorical mappings
-    for col, mapping in categorical_mappings.items():
+    # Ensure correct encoding for each categorical column
+    for col, categories in categorical_columns.items():
         if col in input_data.columns:
-            input_data[col] = input_data[col].map(mapping)
+            # Use the fitted encoder for each categorical column
+            if col in preprocessing.fitted_categorical_encoders:
+                encoder = preprocessing.fitted_categorical_encoders[col]
+                
+                # Transform the input value
+                try:
+                    encoded_value = encoder.transform(input_data[[col]])[0][0]
+                    input_data[col] = encoded_value
+                except Exception as e:
+                    st.error(f"Error encoding {col}: {e}")
+                    st.error(f"Value: {input_data[col].values}")
+                    return None
     
-    # Clip numerical values to prevent overflow
-    if 'LoanAmount' in input_data.columns:
-        # Clip loan amount to a reasonable range based on training data statistics
-        input_data['LoanAmount'] = np.clip(input_data['LoanAmount'], 0, 500)
+    # Ensure correct column order
+    input_data = input_data.reindex(columns=feature_names)
     
     return input_data
 
 def predict_loan_eligibility(model, preprocessing, feature_names, input_data):
     """Predict loan eligibility using the trained model and preprocessing pipeline."""
     try:
-        # Validate and clean input data
-        input_data = validate_input(input_data)
+        # Prepare input data for prediction
+        prepared_data = prepare_input_data(input_data, feature_names, preprocessing)
         
-        # Ensure the input data has all required columns in the correct order
-        input_data = input_data.reindex(columns=feature_names)
-        
-        # Add small epsilon to prevent zero/negative values for Yeo-Johnson
-        epsilon = 1e-10
-        for col in input_data.columns:
-            input_data[col] = input_data[col] + epsilon
+        if prepared_data is None:
+            st.error("Failed to prepare input data")
+            return None
         
         # Preprocess the input data
-        X_processed = preprocessing.transform(input_data)
+        X_processed = preprocessing.transform(prepared_data)
         
         # Make prediction
         prediction = model.predict(X_processed)
@@ -139,7 +146,7 @@ def main():
     if submitted:
         input_df = pd.DataFrame([input_data])
         
-        # Validate and preprocess input
+        # Predict loan eligibility
         prediction = predict_loan_eligibility(model, preprocessing, feature_names, input_df)
         
         if prediction:
@@ -150,7 +157,9 @@ def main():
                 st.warning("Unfortunately, your loan application may not be approved.")
             
             if hasattr(model, 'predict_proba'):
-                X_processed = preprocessing.transform(validate_input(input_df))
+                X_processed = preprocessing.transform(
+                    prepare_input_data(input_df, feature_names, preprocessing)
+                )
                 prob = model.predict_proba(X_processed)[0]
                 st.info(f"Prediction Confidence: {prob.max():.2%}")
 
