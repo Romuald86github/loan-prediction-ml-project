@@ -35,11 +35,51 @@ def load_model_and_pipeline():
         st.error(f"Error loading model or pipeline: {e}")
         return None, None, None
 
+def validate_input(input_data):
+    """
+    Validate and clean input data to prevent numerical issues
+    
+    Args:
+        input_data (pd.DataFrame): Input dataframe to validate
+    
+    Returns:
+        pd.DataFrame: Cleaned and validated dataframe
+    """
+    # Mapping for categorical columns
+    categorical_mappings = {
+        'Gender': {'Male': 1, 'Female': 0},
+        'Married': {'Yes': 1, 'No': 0},
+        'Dependents': {'0': 0, '1': 1, '2': 2, '3+': 3},
+        'Education': {'Graduate': 1, 'Not Graduate': 0},
+        'Credit_History': {'1': 1, '0': 0},
+        'Property_Area': {'Urban': 2, 'Rural': 0, 'Semiurban': 1}
+    }
+    
+    # Apply categorical mappings
+    for col, mapping in categorical_mappings.items():
+        if col in input_data.columns:
+            input_data[col] = input_data[col].map(mapping)
+    
+    # Clip numerical values to prevent overflow
+    if 'LoanAmount' in input_data.columns:
+        # Clip loan amount to a reasonable range based on training data statistics
+        input_data['LoanAmount'] = np.clip(input_data['LoanAmount'], 0, 500)
+    
+    return input_data
+
 def predict_loan_eligibility(model, preprocessing, feature_names, input_data):
     """Predict loan eligibility using the trained model and preprocessing pipeline."""
     try:
+        # Validate and clean input data
+        input_data = validate_input(input_data)
+        
         # Ensure the input data has all required columns in the correct order
         input_data = input_data.reindex(columns=feature_names)
+        
+        # Add small epsilon to prevent zero/negative values for Yeo-Johnson
+        epsilon = 1e-10
+        for col in input_data.columns:
+            input_data[col] = input_data[col] + epsilon
         
         # Preprocess the input data
         X_processed = preprocessing.transform(input_data)
@@ -53,6 +93,7 @@ def predict_loan_eligibility(model, preprocessing, feature_names, input_data):
         return prediction_label
     except Exception as e:
         st.error(f"Prediction error: {e}")
+        st.error(f"Input data: {input_data}")
         return None
 
 def main():
@@ -83,7 +124,13 @@ def main():
                 elif feature == 'Property_Area':
                     input_data[feature] = st.selectbox(feature, ["Urban", "Rural", "Semiurban"])
                 elif feature == 'LoanAmount':
-                    input_data[feature] = st.number_input(feature, min_value=0, value=150, help="Loan amount in thousands")
+                    input_data[feature] = st.number_input(
+                        feature, 
+                        min_value=0, 
+                        max_value=500, 
+                        value=150, 
+                        help="Loan amount in thousands (0-500)"
+                    )
                 else:
                     st.warning(f"Unexpected feature: {feature}")
         
@@ -92,9 +139,7 @@ def main():
     if submitted:
         input_df = pd.DataFrame([input_data])
         
-        # Convert input to the expected format
-        input_df['Dependents'] = input_df['Dependents'].replace({'3+': '3'})
-        
+        # Validate and preprocess input
         prediction = predict_loan_eligibility(model, preprocessing, feature_names, input_df)
         
         if prediction:
@@ -105,7 +150,7 @@ def main():
                 st.warning("Unfortunately, your loan application may not be approved.")
             
             if hasattr(model, 'predict_proba'):
-                X_processed = preprocessing.transform(input_df)
+                X_processed = preprocessing.transform(validate_input(input_df))
                 prob = model.predict_proba(X_processed)[0]
                 st.info(f"Prediction Confidence: {prob.max():.2%}")
 
