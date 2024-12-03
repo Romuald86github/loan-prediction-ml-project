@@ -50,8 +50,9 @@ class PreprocessingPipeline:
 
         X_preprocessed = self.preprocessor.fit_transform(X)
         
+        # Update this line to use get_feature_names_out()
         onehot_encoder = self.preprocessor.named_transformers_['cat'].named_steps['onehot']
-        cat_feature_names = onehot_encoder.get_feature_names(categorical_features).tolist()
+        cat_feature_names = onehot_encoder.get_feature_names_out(categorical_features).tolist()
         self.feature_names = numeric_features + cat_feature_names
 
         X_resampled, y_resampled = self.smote.fit_resample(X_preprocessed, y)
@@ -98,3 +99,5 @@ class PreprocessingPipeline:
 if __name__ == "__main__":
     pipeline = PreprocessingPipeline()
     X, y = pipeline.preprocess()
+    print("Preprocessing completed successfully.")
+    print(f"Preprocessed data shape: X: {X.shape}, y: {y.shape}")
