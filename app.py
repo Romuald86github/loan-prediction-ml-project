@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import joblib
 import pandas as pd
-from preprocessing_pipeline import PreprocessingPipeline
+from src.preprocessing_pipeline import PreprocessingPipeline
 
 app = Flask(__name__)
 
