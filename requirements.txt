@@ -1,0 +1,5 @@
+pandas
+flask
+imbalanced-learn
+scikit-learn
+gunicorn
