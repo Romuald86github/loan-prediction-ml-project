@@ -1,25 +1,34 @@
-# Use an official Python runtime as the base image
-FROM python:3.9-slim
+# Stage 1: Install dependencies
+FROM python:3.9-slim as builder
 
-# Add DNS configuration
-RUN echo "nameserver 8.8.8.8" > /etc/resolv.conf
-RUN echo "nameserver 8.8.4.4" >> /etc/resolv.conf
-
-# Set the working directory in the container
+# Set work directory
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Copy requirements
+COPY requirements.txt .
 
-# Install any needed packages specified in requirements.txt with trusted hosts
-RUN pip install --no-cache-dir -r requirements.txt \
-    --trusted-host pypi.python.org \
-    --trusted-host files.pythonhosted.org \
-    --trusted-host pypi.org \
-    --index-url http://pypi.org/simple/
+# Install dependencies with network configuration
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    pip install --user --no-cache-dir -r requirements.txt
 
-# Make port 8000 available to the world outside this container
+# Stage 2: Final image
+FROM python:3.9-slim
+
+# Copy installed packages from builder
+COPY --from=builder /root/.local /root/.local
+
+# Make sure scripts in .local are usable
+ENV PATH=/root/.local/bin:$PATH
+
+# Set work directory
+WORKDIR /app
+
+# Copy application
+COPY . .
+
+# Expose port
 EXPOSE 8000
 
-# Run gunicorn when the container launches
+# Run the application
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
