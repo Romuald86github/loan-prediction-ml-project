@@ -15,7 +15,7 @@ def home():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if request.method == 'POST':
+    try:
         # Get data from form
         features = {
             'Gender': request.form.get('Gender'),
@@ -47,25 +47,23 @@ def predict():
             result=result,
             result_class=result_class
         )
+    except Exception as e:
+        return render_template(
+            'index.html',
+            error=f"An error occurred: {str(e)}"
+        )
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
-    # Get JSON data from request
-    data = request.json
-    
-    # Create a DataFrame
-    df = pd.DataFrame([data])
-    
-    # Preprocess the input
-    X = preprocessing_pipeline.transform(df)
-    
-    # Make prediction
-    prediction = model.predict(X)
-    
-    # Decode prediction
-    result = preprocessing_pipeline.target_encoder.inverse_transform(prediction)[0]
-    
-    return jsonify({'loan_status': result})
+    try:
+        data = request.json
+        df = pd.DataFrame([data])
+        X = preprocessing_pipeline.transform(df)
+        prediction = model.predict(X)
+        result = preprocessing_pipeline.target_encoder.inverse_transform(prediction)[0]
+        return jsonify({'loan_status': result})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8000, debug=False)
