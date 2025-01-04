@@ -11,12 +11,18 @@ preprocessing_pipeline = PreprocessingPipeline.load_pipeline()
 
 @app.route('/')
 def home():
+    """
+    Render the home page where users can input their loan information.
+    """
     return render_template('index.html')
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    if request.method == 'POST':
-        # Get data from form
+    """
+    Handle form submissions for loan status prediction.
+    """
+    try:
+        # Extract features from form inputs
         features = {
             'Gender': request.form.get('Gender'),
             'Married': request.form.get('Married'),
@@ -27,41 +33,64 @@ def predict():
             'Property_Area': request.form.get('Property_Area')
         }
 
-        # Create a DataFrame
+        # Ensure no fields are left empty
+        if not all(features.values()):
+            raise ValueError("All fields must be filled out.")
+
+        # Create a DataFrame for the input
         df = pd.DataFrame([features])
 
-        # Preprocess the input
+        # Preprocess the input data
         X = preprocessing_pipeline.transform(df)
 
         # Make prediction
         prediction = model.predict(X)
 
-        # Decode prediction
+        # Decode the prediction result
         result = preprocessing_pipeline.target_encoder.inverse_transform(prediction)[0]
 
-        # Add class for color-coding
+        # Assign a CSS class for styling based on the result
         result_class = 'approved' if result == 'Y' else 'rejected'
 
-        return render_template('index.html', prediction_text=f'Loan Status: <span class="{result_class}">{result}</span>')
+        # Render the home page with the prediction result
+        return render_template(
+            'index.html',
+            result=result,
+            result_class=result_class
+        )
+    except Exception as e:
+        # Handle any errors gracefully and display them
+        return render_template(
+            'index.html',
+            error=f"An error occurred: {str(e)}"
+        )
 
 @app.route('/api/predict', methods=['POST'])
 def api_predict():
-    # Get JSON data from request
-    data = request.json
+    """
+    Provide a JSON API endpoint for loan status prediction.
+    """
+    try:
+        # Extract JSON data from the request
+        data = request.json
 
-    # Create a DataFrame
-    df = pd.DataFrame([data])
+        # Create a DataFrame for the input
+        df = pd.DataFrame([data])
 
-    # Preprocess the input
-    X = preprocessing_pipeline.transform(df)
+        # Preprocess the input data
+        X = preprocessing_pipeline.transform(df)
 
-    # Make prediction
-    prediction = model.predict(X)
+        # Make prediction
+        prediction = model.predict(X)
 
-    # Decode prediction
-    result = preprocessing_pipeline.target_encoder.inverse_transform(prediction)[0]
+        # Decode the prediction result
+        result = preprocessing_pipeline.target_encoder.inverse_transform(prediction)[0]
 
-    return jsonify({'loan_status': result})
+        # Return the result as JSON
+        return jsonify({'loan_status': result})
+    except Exception as e:
+        # Handle API errors gracefully
+        return jsonify({'error': str(e)}), 400
 
 if __name__ == '__main__':
     app.run(debug=True)
