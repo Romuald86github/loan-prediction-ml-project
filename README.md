@@ -193,7 +193,7 @@ Log out and log back in for group changes to take effect.
 
 4. Clone and deploy the application:
 ```bash
-git clone https://github.com/your-username/loan-prediction-ml-project.git
+git clone https://github.com/Romuald86github/loan-prediction-ml-project.git
 cd loan-prediction-ml-project
 docker build -t loan-app:v1 .
 docker run -d -p 8000:8000 --name loan-app-container loan-app:v1
