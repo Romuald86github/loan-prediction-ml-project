@@ -104,7 +104,7 @@ You can try the loan prediction model directly by:
 
 Clone the repository:
 ```bash
-git clone https://github.com/your-username/loan-prediction-ml-project.git
+git clone https://github.com/Romuald86github/loan-prediction-ml-project.git
 cd loan-prediction-ml-project
 ```
 
