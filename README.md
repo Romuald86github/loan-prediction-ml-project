@@ -254,6 +254,10 @@ loan-prediction-ml-project/
     └── index.html
 ```
 
+## you can find the notebook here
+Notebooks/Loan_Romuald (3).ipynb
+
+
 ## Future Enhancements
 
 1. Model Improvements
