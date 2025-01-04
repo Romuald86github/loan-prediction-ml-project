@@ -10,6 +10,7 @@
     <div class="container">
         <h1>Loan Prediction</h1>
         <form action="{{ url_for('predict') }}" method="post">
+            <!-- Form fields remain the same -->
             <label for="Gender">Gender:</label>
             <select name="Gender" id="Gender" required>
                 <option value="" disabled selected>Select Gender</option>
@@ -41,7 +42,7 @@
             </select>
 
             <label for="LoanAmount">Loan Amount:</label>
-            <input type="number" name="LoanAmount" id="LoanAmount" placeholder="Enter loan amount" required>
+            <input type="number" name="LoanAmount" id="LoanAmount" required>
 
             <label for="Credit_History">Credit History:</label>
             <select name="Credit_History" id="Credit_History" required>
@@ -63,13 +64,13 @@
 
         {% if result %}
         <div class="prediction {{ result_class }}">
-            <h2>Loan Status: {{ result }}</h2>
+            Loan Status: {{ result }}
         </div>
         {% endif %}
 
         {% if error %}
         <div class="error">
-            <h2>{{ error }}</h2>
+            {{ error }}
         </div>
         {% endif %}
     </div>

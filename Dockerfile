@@ -1,34 +1,17 @@
-# Stage 1: Install dependencies
-FROM python:3.9-slim as builder
-
-# Set work directory
-WORKDIR /app
-
-# Copy requirements
-COPY requirements.txt .
-
-# Install dependencies with network configuration
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends gcc python3-dev && \
-    pip install --user --no-cache-dir -r requirements.txt
-
-# Stage 2: Final image
+# Use an official Python runtime as the base image
 FROM python:3.9-slim
 
-# Copy installed packages from builder
-COPY --from=builder /root/.local /root/.local
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
-
-# Set work directory
+# Set the working directory in the container
 WORKDIR /app
 
-# Copy application
-COPY . .
+# Copy the current directory contents into the container at /app
+COPY . /app
 
-# Expose port
+# Install any needed packages specified in requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Make port 8000 available to the world outside this container
 EXPOSE 8000
 
-# Run the application
+# Run gunicorn when the container launches
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]

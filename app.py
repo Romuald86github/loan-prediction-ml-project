@@ -40,10 +40,10 @@ def predict():
         # Create a DataFrame for the input
         df = pd.DataFrame([features])
 
-        # Preprocess the input data
+        # Preprocess the input data using the pipeline
         X = preprocessing_pipeline.transform(df)
 
-        # Make prediction
+        # Make prediction using the loaded model
         prediction = model.predict(X)
 
         # Decode the prediction result
@@ -58,8 +58,14 @@ def predict():
             result=result,
             result_class=result_class
         )
+    except ValueError as ve:
+        # Handle validation errors
+        return render_template(
+            'index.html',
+            error=str(ve)
+        )
     except Exception as e:
-        # Handle any errors gracefully and display them
+        # Handle any other errors gracefully
         return render_template(
             'index.html',
             error=f"An error occurred: {str(e)}"
@@ -74,6 +80,16 @@ def api_predict():
         # Extract JSON data from the request
         data = request.json
 
+        # Validate required fields
+        required_fields = [
+            'Gender', 'Married', 'Dependents', 'Education',
+            'LoanAmount', 'Credit_History', 'Property_Area'
+        ]
+        
+        for field in required_fields:
+            if field not in data:
+                return jsonify({'error': f'Missing required field: {field}'}), 400
+
         # Create a DataFrame for the input
         df = pd.DataFrame([data])
 
@@ -87,10 +103,33 @@ def api_predict():
         result = preprocessing_pipeline.target_encoder.inverse_transform(prediction)[0]
 
         # Return the result as JSON
-        return jsonify({'loan_status': result})
+        return jsonify({
+            'status': 'success',
+            'loan_status': result,
+            'message': 'Prediction successful'
+        })
     except Exception as e:
         # Handle API errors gracefully
-        return jsonify({'error': str(e)}), 400
+        return jsonify({
+            'status': 'error',
+            'error': str(e),
+            'message': 'Prediction failed'
+        }), 400
+
+@app.errorhandler(404)
+def page_not_found(e):
+    """
+    Handle 404 errors gracefully.
+    """
+    return render_template('404.html'), 404
+
+@app.errorhandler(500)
+def internal_server_error(e):
+    """
+    Handle 500 errors gracefully.
+    """
+    return render_template('500.html'), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Run the Flask application
+    app.run(host='0.0.0.0', port=8000, debug=False)
